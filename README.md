@@ -1,6 +1,8 @@
 # 16-Bit MIPS Processor
 
-~~~~~~~~< Progress Report #2 >~~~~~~~~
+Progress Report #2
+
+
 To-Do:
 
 -RegDst and ALUSrc multiplexers need to be implemented  at gate level.
