@@ -5,13 +5,13 @@ Progress Report #2
 
 To-Do:
 
--RegDst and ALUSrc multiplexers implemented at gate level
+RegDst and ALUSrc multiplexers implemented at gate level
 
--Implement data memory
----- lw instrution
+Implement data memory
+-lw instrution
 
--Implement branching logic
----- bne instruction
----- beq instruction
+Implement branching logic
+-bne instruction
+-beq instruction
 
--Top-level diagram of the datapath.
+Top-level diagram of the datapath.
