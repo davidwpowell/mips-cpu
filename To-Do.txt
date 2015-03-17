@@ -1,0 +1,23 @@
+~~~~~~~~~~< To-Do >~~~~~~~~~~
+
+Finish converting new template file to 16-Bit
+
+
+Implement multiplexers at gate-level:
+-RegDst
+-MemtoReg
+-ALUSrc
+-Branch
+
+
+Implement data memory
+-lw instruction
+-sw instruction
+
+
+Implement branching logic
+-beq instruction
+-bne instruction???
+
+
+Top-level diagram of the datapath
