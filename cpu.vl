@@ -114,7 +114,7 @@ module decoder (S1,S0,D3,D2,D1,D0);
        a3 (D3,S1,S0); 
 endmodule 
 
-/////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // 16-Bit ALU
 module alu (op,a,b,result,zero);
@@ -219,13 +219,14 @@ module mux4x1(a,b,c,d,Op,Result);
     or  g7 (Result,w1,w2,w3,w4);
 endmodule
 
-/////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 
-// Changed for 16-Bit instructions
-module MainControl (Op,Control); 
+// Changed for 16-Bit, need to complete BNE implementation //
+// Main Control
+module MainControl (Op, Control); 
 
-  input [3:0] Op;
+  input  [3:0] Op;
   output reg [7:0] Control;
 
   always @(Op) case (Op)
@@ -237,45 +238,51 @@ module MainControl (Op,Control);
     4'b0101: Control <= 8'b01110000; // LW    
     4'b0110: Control <= 8'b01001000; // SW    
     4'b1000: Control <= 8'b00000101; // BEQ
-				     // BNE ???
+    4'b1001: Control <= 8'b         ; // BNE // incomplete //
   endcase
+  
 endmodule
 
 
-// Needs to be changed to work with 16-Bit instructions
-module ALUControl (ALUOp,FuncCode,ALUCtl); 
-  input [1:0] ALUOp;
-  input [5:0] FuncCode;
-  output reg [2:0] ALUCtl;
-
-  always @(ALUOp,FuncCode) case (ALUOp)
-    2'b00: ALUCtl <= 3'b010; // add
-    2'b01: ALUCtl <= 3'b110; // subtract
-    2'b10: case (FuncCode)
-	     32: ALUCtl <= 3'b010; // add
-	     34: ALUCtl <= 3'b110; // subtract
-	     36: ALUCtl <= 3'b000; // and
-	     37: ALUCtl <= 3'b001; // or
-	     42: ALUCtl <= 3'b111; // slt
-	default: ALUCtl <= 15; 
+// Changed for 16-Bit, need to add anything for branch or memory??? //
+// ALU Control
+module ALUControl (ALUOp, Op, ALUCtl);
+  
+  input  [1:0] ALUOp;
+  input  [3:0] Op;
+  output [2:0] ALUCtl;
+  
+  always @(ALUop, Op) case (ALUOp)
+    2'b00: ALUCtl <= 3'b010 // add
+    2'b01: ALUCtl <= 3'b110 // subtract
+    2'b10: case (Op)
+	    4'b0000: ALUCtl <= 3'010 // add
+	    4'b0001: ALUCtl <= 3'110 // sub
+	    4'b0010: ALUCtl <= 3'000 // and
+	    4'b0011: ALUCtl <= 3'001 // or
+	    4'b0111: ALUCtl <= 3'111 // slt
+	    default: ALUCtl <= 15;
     endcase
   endcase
+  
 endmodule
 
 
+// 16-Bit CPU
 module CPU (clock,WD,IR);
 
   input clock;
   output [15:0] WD,IR;
-  reg[15:0] PC, IMemory[0:1023], DMemory[0:1023];
+  reg[15:0] PC,IMemory[0:1023],DMemory[0:1023];
   wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
   wire [1:0] WR;
-  wire [5:0] op,func; // change?
-  wire [2:0] ALUctl;  // change?
-  wire [1:0] ALUOp;   // change?
+  wire [3:0] Op;
+  wire [2:0] ALUctl;
+  wire [1:0] ALUOp;
 
-  initial begin 
-  // Program: swap memory cells and compute absolute value
+  initial begin
+    /* 32-Bit instructions
+    // Program: swap memory cells and compute absolute value
     IMemory[0] = 32'h8c080000;  // lw $8, 0($0)
     IMemory[1] = 32'h8c090004;  // lw $9, 4($0)
     IMemory[2] = 32'h0109502a;  // slt $10, $8, $9
@@ -285,44 +292,69 @@ module CPU (clock,WD,IR);
     IMemory[6] = 32'h8c0b0000;  // lw $11, 0($0)
     IMemory[7] = 32'h8c0c0004;  // lw $12, 4($0)
     IMemory[8] = 32'h016c5822;  // sub $11, $11, $12
-
-  // Data
-    DMemory [0] = 32'h5; // switch the cells and see how the simulation output changes
+    */
+    
+    // 16-Bit Binary Instructions
+    // Program: swap memory cells and compute absolute value
+    IMemory[0] = 16'b0101000100000000; // lw  $1, 0($0)
+    IMemory[1] = 16'b0101001000000100; // lw  $2, 4($0)
+    IMemory[2] = 16'b0111011011000000; // slt $3, $1, $2
+    IMemory[3] = 16'b1000110000001000; // beq $3, $0, 8
+    IMemory[4] = 16'b0110000100000100; // sw  $1, 4($0)
+    IMemory[5] = 16'b0110001000000100; // sw  $2, 0($0)
+    IMemory[6] = 16'b0101000100000000; // lw  $1, 0($0)
+    IMemory[7] = 16'b0101001000000100; // lw  $2, 4($0)
+    IMemory[8] = 16'b0001011001000000; // sub $1, $1, $2  
+    
+    /* 32-Bit Data
+    DMemory [0] = 32'h5;
     DMemory [1] = 32'h7;
+    */
+    
+    // 16-Bit Data
+    // switch the cells and see how the simulation output changes
+    DMemory [0] = 16'b0000000000000101; // 5
+    DMemory [1] = 16'b0000000000000111; // 7
   end
 
   initial PC = 0;
 
   assign IR = IMemory[PC>>1];
-  assign SignExtend = {{16{IR[15]}},IR[15:0]}; // sign extension
+  assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension
   
-  reg_file rf (IR[25:21],IR[20:16],WR,WD,RegWrite,A,RD2,clock);
-  alu fetch (3'b010,PC,4,PCplus4,Unused1);
+  reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
+  alu fetch (3'b010,PC,2,PCplus4,Unused1);
   alu ex (ALUctl, A, B, ALUOut, Zero);
-  alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);
-  MainControl MainCtr (IR[31:26],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Branch,ALUOp}); 
-  ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl); // ALU control unit
+  alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);  //change anything?
+  MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Branch,ALUOp}); 
+  ALUControl ALUCtrl(ALUOp, IR[15:12], ALUctl); // ALU control unit
   
-  // Implement these with gate-level modeling
-  assign WR = (RegDst) ? IR[15:11]: IR[20:16]; // RegDst Mux
-  assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux
-  assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
-  assign NextPC = (Branch && Zero) ? Target: PCplus4; // Branch Mux
-
+  
+  
+  ///// Implement these with gate-level modeling /////
+  assign WR = (RegDst) ? IR[7:6]: IR[9:8];             // RegDst Mux
+  
+  assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux //change [ALUOut>>2]?
+  
+  assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
+  
+  assign NextPC = (Branch && Zero) ? Target: PCplus4;  // Branch Mux //change PCplus4 to PCplus2?
+  
+  
+  
   always @(negedge clock) begin 
     PC <= NextPC;
-    if (MemWrite) DMemory[ALUOut>>2] <= RD2;
+    if (MemWrite) DMemory[ALUOut>>2] <= RD2; //change [ALUOut>>2]?
   end
-
+  
 endmodule
 
 
-// Test module
-
+// Test Module
 module test ();
 
   reg clock;
-  wire [31:0] WD,IR;
+  wire [15:0] WD,IR;
 
   CPU test_cpu(clock,WD,IR);
 
@@ -330,18 +362,18 @@ module test ();
   
   initial begin
     $display ("time clock IR       WD");
-    $monitor ("%2d   %b     %h %h", $time,clock,IR,WD);
+    $monitor ("%2d   %b     %b %b", $time,clock,IR,WD);
     clock = 1;
     #18 $finish;
   end
-
+  
 endmodule
 
+/* Compiling and Simulation
 
-/* Compiling and simulation
+// Ours will be different because we are reusing registers
 
-C:\CS385\HDL>iverilog mips-simple.vl
-
+C:\CS385\HDL>iverilog cpu.vl
 C:\CS385\HDL>vvp a.out
 
 time clock IR       WD
