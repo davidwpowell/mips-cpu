@@ -2,60 +2,247 @@
 // 16-Bit MIPS Single-Cycle Implementation
 //
 
-module reg_file (RR1,RR2,WR,WD,RegWrite,RD1,RD2,clock);
-
-  input [4:0] RR1,RR2,WR;
-  input [31:0] WD;
-  input RegWrite,clock;
-  output [31:0] RD1,RD2;
-
-  reg [31:0] Regs[0:31];
-
-  assign RD1 = Regs[RR1];
-  assign RD2 = Regs[RR2];
-
-  initial Regs[0] = 0;
-
-  always @(negedge clock)
-    if (RegWrite==1 & WR!=0) 
-	Regs[WR] <= WD;
-
+// Register File
+module reg_file (rr1,rr2,wr,wd,regwrite,rd1,rd2,clock);
+   input  [1:0] rr1,rr2,wr;
+   input  [15:0] wd;
+   input  regwrite,clock;
+   wire   [15:0] q1,q2,q3;
+   output [15:0] rd1,rd2;
+   // registers
+   D_flip_flop r100 (wd[0],c1,c2,c3,q1[0],q2[0],q3[0]);
+   D_flip_flop r101 (wd[1],c1,c2,c3,q1[1],q2[1],q3[1]);
+   D_flip_flop r102 (wd[2],c1,c2,c3,q1[2],q2[2],q3[2]);
+   D_flip_flop r103 (wd[3],c1,c2,c3,q1[3],q2[3],q3[3]);
+   D_flip_flop r104 (wd[4],c1,c2,c3,q1[4],q2[4],q3[4]);
+   D_flip_flop r105 (wd[5],c1,c2,c3,q1[5],q2[5],q3[5]);
+   D_flip_flop r106 (wd[6],c1,c2,c3,q1[6],q2[6],q3[6]);
+   D_flip_flop r107 (wd[7],c1,c2,c3,q1[7],q2[7],q3[7]);
+   D_flip_flop r108 (wd[8],c1,c2,c3,q1[8],q2[8],q3[8]);
+   D_flip_flop r109 (wd[9],c1,c2,c3,q1[9],q2[9],q3[9]);
+   D_flip_flop r110 (wd[10],c1,c2,c3,q1[10],q2[10],q3[10]);
+   D_flip_flop r111 (wd[11],c1,c2,c3,q1[11],q2[11],q3[11]);
+   D_flip_flop r112 (wd[12],c1,c2,c3,q1[12],q2[12],q3[12]);
+   D_flip_flop r113 (wd[13],c1,c2,c3,q1[13],q2[13],q3[13]);
+   D_flip_flop r114 (wd[14],c1,c2,c3,q1[14],q2[14],q3[14]);
+   D_flip_flop r115 (wd[15],c1,c2,c3,q1[15],q2[15],q3[15]);
+   // output port
+   mux4x1_r mux100 (0,q1[0],q2[0],q3[0],rr1,rr2,rd1[0],rd2[0]),
+            mux101 (0,q1[1],q2[1],q3[1],rr1,rr2,rd1[1],rd2[1]),
+            mux102 (0,q1[2],q2[2],q3[2],rr1,rr2,rd1[2],rd2[2]),
+            mux103 (0,q1[3],q2[3],q3[3],rr1,rr2,rd1[3],rd2[3]),
+            mux104 (0,q1[4],q2[4],q3[4],rr1,rr2,rd1[4],rd2[4]),
+            mux105 (0,q1[5],q2[5],q3[5],rr1,rr2,rd1[5],rd2[5]),
+            mux106 (0,q1[6],q2[6],q3[6],rr1,rr2,rd1[6],rd2[6]),
+            mux107 (0,q1[7],q2[7],q3[7],rr1,rr2,rd1[7],rd2[7]),
+            mux108 (0,q1[8],q2[8],q3[8],rr1,rr2,rd1[8],rd2[8]),
+            mux109 (0,q1[9],q2[9],q3[9],rr1,rr2,rd1[9],rd2[9]),
+            mux110 (0,q1[10],q2[10],q3[10],rr1,rr2,rd1[10],rd2[10]),
+            mux111 (0,q1[11],q2[11],q3[11],rr1,rr2,rd1[11],rd2[11]),
+            mux112 (0,q1[12],q2[12],q3[12],rr1,rr2,rd1[12],rd2[12]),
+            mux113 (0,q1[13],q2[13],q3[13],rr1,rr2,rd1[13],rd2[13]),
+            mux114 (0,q1[14],q2[14],q3[14],rr1,rr2,rd1[14],rd2[14]),
+            mux115 (0,q1[15],q2[15],q3[15],rr1,rr2,rd1[15],rd2[15]);
+   // input port
+   decoder dec(wr[1],wr[0],w3,w2,w1,w0);
+   and a (regwrite_and_clock,regwrite,clock);
+   and a1 (c1,regwrite_and_clock,w1),
+       a2 (c2,regwrite_and_clock,w2),
+       a3 (c3,regwrite_and_clock,w3);
 endmodule
 
-module alu (ALUctl,A,B,ALUOut,Zero);
+// Components
+module D_flip_flop(D,CLK1,CLK2,CLK3,Q1,Q2,Q3);
+   input  D,CLK1,CLK2,CLK3; 
+   output Q1,Q2,Q3; 
+   wire   CLK1N,CLK2N,CLK3N,X,Y,Z;
+   not    not1 (CLK1N,CLK1),
+          not2 (CLK2N,CLK2),
+          not3 (CLK3N,CLK3);
+   D_latch D1(D,CLK1,X),
+           D2(X,CLK1N,Q1);
+   D_latch D3(D,CLK2,Y),
+           D4(Y,CLK2N,Q2);
+   D_latch D5(D,CLK3,Z),
+           D6(Z,CLK3N,Q3);
+endmodule 
 
-  input [2:0] ALUctl;
-  input [31:0] A,B;
-  output reg [31:0] ALUOut;
-  output Zero;
+// D-Latch
+module D_latch(D,C,Q);
+   input  D,C; 
+   output Q;
+   wire   x,y,D1,Q1; 
+   nand nand1 (x,D,C), 
+        nand2 (y,D1,C), 
+        nand3 (Q,x,Q1),
+        nand4 (Q1,y,Q); 
+   not  not1  (D1,D);
+endmodule 
 
-  assign Zero = (ALUOut==0); // Zero is true if ALUOut is 0
-  always @(ALUctl, A, B)     // reevaluate if these change
-    case (ALUctl)
-      3'b000: ALUOut <= A & B;
-      3'b001: ALUOut <= A | B;
-      3'b010: ALUOut <= A + B;
-      3'b110: ALUOut <= A - B;
-      3'b111: ALUOut <= A < B ? 1:0;
-     default: ALUOut <= 0; //default to 0, should not happen;
-   endcase
-
+// 4x1 Multiplexer (16-Bit implementation)
+module mux4x1_r (i0,i1,i2,i3,select,select2,x,y);
+   input  i0,i1,i2,i3;
+   input  [1:0] select,select2;
+   output x,y;
+   wire   w1,w2,w3,w4,w5,w6;
+   wire   w12,w22,w32,w42,w52,w62;
+   not  g1 (w1,select[1]),
+        g2 (w2,select[0]);
+   and  g3 (w3,i0,w2,w1),
+        g4 (w4,i1,w1,select[0]),
+        g5 (w5,i2,select[1],w2),
+        g6 (w6,i3,select[1],select[0]);
+   or   g7 (x, w3, w4, w5, w6);
+   not  g12 (w12, select2[1]),
+        g22 (w22, select2[0]);
+   and  g32 (w32, i0, w22, w12),
+        g42 (w42, i1, w12, select2[0]),
+        g52 (w52, i2, select2[1], w22),
+        g62 (w62, i3, select2[1], select2[0]);
+   or   g7 (y, w32, w42, w52, w62);
 endmodule
 
+// Decoder
+module decoder (S1,S0,D3,D2,D1,D0); 
+   input  S0,S1; 
+   output D0,D1,D2,D3; 
+   not n1 (notS0,S0),
+       n2 (notS1,S1);
+   and a0 (D0,notS1,notS0), 
+       a1 (D1,notS1,S0), 
+       a2 (D2,S1,notS0), 
+       a3 (D3,S1,S0); 
+endmodule 
+
+/////////////////////////////////////////////////////////////////////////////
+
+// 16-Bit ALU
+module alu (op,a,b,result,zero);
+   input  [15:0] a;
+   input  [15:0] b;
+   input  [2:0] op;
+   output [15:0] result;
+   output zero;
+   wire   c1,c2,c3,c4,r;
+   
+   ALU1   alu0  (a[0],b[0],  op[2],op[1:0],set,op[2],c1,result[0]);
+   ALU1   alu1  (a[1],b[1],  op[2],op[1:0],0,  c1,   c2,result[1]);
+   ALU1   alu2  (a[2],b[2],  op[2],op[1:0],0,  c2,   c3,result[2]);
+   ALU1   alu3  (a[3],b[3],  op[2],op[1:0],0,  c3,   c4,result[3]);
+   ALU1   alu4  (a[4],b[4],  op[2],op[1:0],0,  c4,   c5,result[4]);
+   ALU1   alu5  (a[5],b[5],  op[2],op[1:0],0,  c5,   c6,result[5]);
+   ALU1   alu6  (a[6],b[6],  op[2],op[1:0],0,  c6,   c7,result[6]);
+   ALU1   alu7  (a[7],b[7],  op[2],op[1:0],0,  c7,   c8,result[7]);
+   ALU1   alu8  (a[8],b[8],  op[2],op[1:0],0,  c8,   c9,result[8]);
+   ALU1   alu9  (a[9],b[9],  op[2],op[1:0],0,  c9,   c10,result[9]);
+   ALU1   alu10 (a[10],b[10],op[2],op[1:0],0,  c10,  c11,result[10]);
+   ALU1   alu11 (a[11],b[11],op[2],op[1:0],0,  c11,  c12,result[11]);
+   ALU1   alu12 (a[12],b[12],op[2],op[1:0],0,  c12,  c13,result[12]);
+   ALU1   alu13 (a[13],b[13],op[2],op[1:0],0,  c13,  c14,result[13]);
+   ALU1   alu14 (a[14],b[14],op[2],op[1:0],0,  c14,  c15,result[14]);
+   ALUmsb alu15 (a[15],b[15],op[2],op[1:0],0,  c15,  c16,result[15],set);
+
+   or   or1(r,result[0],result[1],result[2],result[3],result[4],result[5],result[6],result[7],
+            result[8],result[9],result[10], result[11],result[12], result[13], result[14],result[15]);
+   not  not1(zero, r);
+endmodule
+
+// 1-Bit ALU
+module ALU1 (a,b,binvert,op,less,carryin,carryout,result);
+   input  a,b,less,carryin,binvert;
+   input  [1:0] op;
+   output carryout,result;
+   wire   sum,a_and_b,a_or_b,b_inv;
+   not    not1 (b_inv,b);
+   mux2x1 mux1 (b,b_inv,binvert,b1);
+   and    and1 (a_and_b,a,b);
+   or     or1 (a_or_b,a,b);
+   fulladder adder1 (sum,carryout,a,b1,carryin);
+   mux4x1 mux2 (a_and_b,a_or_b,sum,less,op[1:0],result); 
+endmodule
+
+// 1-Bit ALU (for most significant bit)
+module ALUmsb (a,b,binvert,op,less,carryin,carryout,result,sum);
+   input  a,b,less,carryin,binvert;
+   input  [1:0] op;
+   output carryout,result,sum;
+   wire   sum,a_and_b,a_or_b,b_inv;
+   not    not1 (b_inv, b);
+   mux2x1 mux1 (b,b_inv,binvert,b1);
+   and    and1 (a_and_b, a, b);
+   or     or1 (a_or_b, a, b);
+   fulladder adder1 (sum,carryout,a,b1,carryin);
+   mux4x1 mux2 (a_and_b,a_or_b,sum,less,op[1:0],result); 
+endmodule
+
+// Half-Adder
+module halfadder (S,C,x,y); 
+   input  x,y; 
+   output S,C; 
+   xor    (S,x,y); 
+   and    (C,x,y); 
+endmodule 
+
+// Full-Adder
+module fulladder (S,C,x,y,z); 
+   input  x,y,z; 
+   output S,C; 
+   wire   S1,D1,D2;
+   halfadder HA1 (S1,D1,x,y), 
+             HA2 (S,D2,S1,z); 
+   or  g1(C,D2,D1); 
+endmodule 
+
+// 2x1 Multiplexer
+module mux2x1(x,y,c,S);
+    output S;
+    input  x,y,c;
+    wire   w1,w2,w3;
+    not g1 (w1,c);
+    and g2 (w2,y,c),
+        g3(w3,x,w1);
+    or  g4(S,w2,w3);
+endmodule
+
+// 4x1 Multiplexer
+module mux4x1(a,b,c,d,Op,Result);
+    input  [1:0] Op;
+    input  a, b, c, d;
+    output Result;
+    wire   w1,w2,w3,w4,w5,w6,Result;
+    not g1 (w5,Op[0]),
+        g2 (w6,Op[1]);
+    and g3 (w1,a,w6,w5),
+        g4 (w2,b,w6,Op[0]),
+        g5 (w3,c,Op[1],w5),
+        g6 (w4,d,Op[1],Op[0]);
+    or  g7 (Result,w1,w2,w3,w4);
+endmodule
+
+/////////////////////////////////////////////////////////////////////////////
+
+
+// Changed for 16-Bit instructions
 module MainControl (Op,Control); 
 
-  input [5:0] Op;
+  input [3:0] Op;
   output reg [7:0] Control;
 
   always @(Op) case (Op)
-    6'b000000: Control <= 8'b10010010; // Rtype
-    6'b100011: Control <= 8'b01110000; // LW    
-    6'b101011: Control <= 8'b01001000; // SW    
-    6'b000100: Control <= 8'b00000101; // BEQ    
+    4'b0000: Control <= 8'b10010010; // Rtype - add
+    4'b0001: Control <= 8'b10010010; // Rtype - sub
+    4'b0010: Control <= 8'b10010010; // Rtype - and
+    4'b0011: Control <= 8'b10010010; // Rtype - or
+    4'b0100: Control <= 8'b01010000; // ADDI
+    4'b0101: Control <= 8'b01110000; // LW    
+    4'b0110: Control <= 8'b01001000; // SW    
+    4'b1000: Control <= 8'b00000101; // BEQ
+				     // BNE ???
   endcase
-
 endmodule
 
+
+// Needs to be changed to work with 16-Bit instructions
 module ALUControl (ALUOp,FuncCode,ALUCtl); 
   input [1:0] ALUOp;
   input [5:0] FuncCode;
@@ -75,16 +262,17 @@ module ALUControl (ALUOp,FuncCode,ALUCtl);
   endcase
 endmodule
 
+
 module CPU (clock,WD,IR);
 
   input clock;
-  output [31:0] WD,IR;
-  reg[31:0] PC, IMemory[0:1023], DMemory[0:1023];
-  wire [31:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
-  wire [4:0] WR;
-  wire [5:0] op,func;
-  wire [2:0] ALUctl;
-  wire [1:0] ALUOp;
+  output [15:0] WD,IR;
+  reg[15:0] PC, IMemory[0:1023], DMemory[0:1023];
+  wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
+  wire [1:0] WR;
+  wire [5:0] op,func; // change?
+  wire [2:0] ALUctl;  // change?
+  wire [1:0] ALUOp;   // change?
 
   initial begin 
   // Program: swap memory cells and compute absolute value
@@ -105,14 +293,17 @@ module CPU (clock,WD,IR);
 
   initial PC = 0;
 
-  assign IR = IMemory[PC>>2];
+  assign IR = IMemory[PC>>1];
   assign SignExtend = {{16{IR[15]}},IR[15:0]}; // sign extension
+  
   reg_file rf (IR[25:21],IR[20:16],WR,WD,RegWrite,A,RD2,clock);
   alu fetch (3'b010,PC,4,PCplus4,Unused1);
   alu ex (ALUctl, A, B, ALUOut, Zero);
   alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);
   MainControl MainCtr (IR[31:26],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Branch,ALUOp}); 
   ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl); // ALU control unit
+  
+  // Implement these with gate-level modeling
   assign WR = (RegDst) ? IR[15:11]: IR[20:16]; // RegDst Mux
   assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux
   assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
