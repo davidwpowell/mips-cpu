@@ -7,11 +7,8 @@ To-Do:
 
 RegDst and ALUSrc multiplexers implemented at gate level
 
-Implement data memory
--lw instrution
+Implement data memory for lw instrution
 
-Implement branching logic
--bne instruction
--beq instruction
+Implement branching logic for bne and beq instructions
 
 Top-level diagram of the datapath.
