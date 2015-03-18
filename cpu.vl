@@ -222,7 +222,10 @@ endmodule
 ////////////////////////////////////////////////////////////////////////////////
 
 
-// Changed for 16-Bit // Test BNE instruction //
+// Updated and changed for 16-Bit // Test BNE instruction //
+//
+// Changed the Control output to 10 bits to fit the 3-bit ALUOp at the end
+//
 // Main Control
 module MainControl (Op, Control); 
 
@@ -234,22 +237,21 @@ module MainControl (Op, Control);
     4'b0001: Control <= 10'b1001000110; // SUB
     4'b0010: Control <= 10'b1001000000; // AND
     4'b0011: Control <= 10'b1001000001; // OR
-    //4'b0100: Control <= 10'b01010000xx; // ADDI
+    4'b0100: Control <= 10'b0101000010; // ADDI
     4'b0101: Control <= 10'b0111000000; // LW
     4'b0110: Control <= 10'b0100100000; // SW
     4'b1000: Control <= 10'b0000010001; // BEQ
-    4'b1001: Control <= 10'b0000001001; // BNE // incomplete //
+    4'b1001: Control <= 10'b0000001001; // BNE
   endcase
   
 endmodule
 
-// 2x1 Multiplexer // I think we have another 2x1 on line 196.
-		   //Can we use that one were both implementations?
+// 2x1 Multiplexer // I think we have another 2x1 mux on line 196.
+		   //Can we use one for both mux implementations?
 module mux2x1_2(A,B,Select,Out);
   input A,B,Select;
   output Out;
   wire x,y,z,i;
- 
   not g1 (i,Select);
   and g2 (x,A,i),
       g3 (y,B,Select),
@@ -298,32 +300,30 @@ module CPU (clock,WD,IR);
   reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
   alu fetch (3'b010,PC,2,PCplus4,Unused1);
   alu ex (ALUOp, A, B, ALUOut, Zero);
-  alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);  //change anything?
+  alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);  //change SignExtend<<2 ?
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUOp});
   
+  
+  ///// Implement these with gate-level modeling /////
+  
+  assign WR = (RegDst) ? IR[7:6]: IR[9:8];             // RegDst Mux
+  
+  assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux //change [ALUOut>>2] ?
+  
+  assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
   
   // Branch Logic Multiplexer
   mux2x1_2 br (Bne, Beq, Zero, BranchClt);
   
-  
-  ///// Implement these with gate-level modeling /////
-  assign WR = (RegDst) ? IR[7:6]: IR[9:8];             // RegDst Mux
-  
-  assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux //change [ALUOut>>2]?
-  
-  assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
-  
-  assign NextPC = (BranchClt && Zero) ? Target: PCplus4;  // Branch Mux //change PCplus4 to PCplus2?
-  
+  assign NextPC = (BranchClt) ? Target: PCplus4;  // Branch Mux
   
   
   always @(negedge clock) begin 
     PC <= NextPC;
-    if (MemWrite) DMemory[ALUOut>>2] <= RD2; //change [ALUOut>>2]?
+    if (MemWrite) DMemory[ALUOut>>2] <= RD2; //change [ALUOut>>2] ?
   end
   
 endmodule
-
 
 // Test Module
 module test ();
@@ -337,7 +337,7 @@ module test ();
   
   initial begin
     $display ("time clock IR       WD");
-    $monitor ("%2d   %b     %b %b", $time,clock,IR,WD);
+    $monitor ("%2d   %b     %h %d", $time,clock,IR,WD);
     clock = 1;
     #18 $finish;
   end
