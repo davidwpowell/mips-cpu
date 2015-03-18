@@ -222,49 +222,39 @@ endmodule
 ////////////////////////////////////////////////////////////////////////////////
 
 
-// Changed for 16-Bit, need to complete BNE implementation //
+// Changed for 16-Bit // Test BNE instruction //
 // Main Control
 module MainControl (Op, Control); 
 
   input  [3:0] Op;
-  output reg [7:0] Control;
+  output reg [9:0] Control;
 
   always @(Op) case (Op)
-    4'b0000: Control <= 8'b10010010; // Rtype - add
-    4'b0001: Control <= 8'b10010010; // Rtype - sub
-    4'b0010: Control <= 8'b10010010; // Rtype - and
-    4'b0011: Control <= 8'b10010010; // Rtype - or
-    4'b0100: Control <= 8'b01010000; // ADDI
-    4'b0101: Control <= 8'b01110000; // LW    
-    4'b0110: Control <= 8'b01001000; // SW    
-    4'b1000: Control <= 8'b00000101; // BEQ
-    4'b1001: Control <= 8'b         ; // BNE // incomplete //
+    4'b0000: Control <= 10'b1001000010; // ADD
+    4'b0001: Control <= 10'b1001000110; // SUB
+    4'b0010: Control <= 10'b1001000000; // AND
+    4'b0011: Control <= 10'b1001000001; // OR
+    //4'b0100: Control <= 10'b01010000xx; // ADDI
+    4'b0101: Control <= 10'b0111000000; // LW
+    4'b0110: Control <= 10'b0100100000; // SW
+    4'b1000: Control <= 10'b0000010001; // BEQ
+    4'b1001: Control <= 10'b0000001001; // BNE // incomplete //
   endcase
   
 endmodule
 
-
-// Changed for 16-Bit, need to add anything for branch or memory??? //
-// ALU Control
-module ALUControl (ALUOp, Op, ALUCtl);
-  
-  input  [1:0] ALUOp;
-  input  [3:0] Op;
-  output [2:0] ALUCtl;
-  
-  always @(ALUop, Op) case (ALUOp)
-    2'b00: ALUCtl <= 3'b010 // add
-    2'b01: ALUCtl <= 3'b110 // subtract
-    2'b10: case (Op)
-	    4'b0000: ALUCtl <= 3'010 // add
-	    4'b0001: ALUCtl <= 3'110 // sub
-	    4'b0010: ALUCtl <= 3'000 // and
-	    4'b0011: ALUCtl <= 3'001 // or
-	    4'b0111: ALUCtl <= 3'111 // slt
-	    default: ALUCtl <= 15;
-    endcase
-  endcase
-  
+// 2x1 Multiplexer // I think we have another 2x1 on line 196.
+		   //Can we use that one were both implementations?
+module mux2x1_2(A,B,Select,Out);
+  input A,B,Select;
+  output Out;
+  wire x,y,z,i;
+ 
+  not g1 (i,Select);
+  and g2 (x,A,i),
+      g3 (y,B,Select),
+      g4 (z,A,B);
+  or  g5 (Out,x,y,z);
 endmodule
 
 
@@ -276,45 +266,28 @@ module CPU (clock,WD,IR);
   reg[15:0] PC,IMemory[0:1023],DMemory[0:1023];
   wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
   wire [1:0] WR;
-  wire [3:0] Op;
-  wire [2:0] ALUctl;
-  wire [1:0] ALUOp;
+  wire [2:0] ALUOp;
 
   initial begin
-    /* 32-Bit instructions
-    // Program: swap memory cells and compute absolute value
-    IMemory[0] = 32'h8c080000;  // lw $8, 0($0)
-    IMemory[1] = 32'h8c090004;  // lw $9, 4($0)
-    IMemory[2] = 32'h0109502a;  // slt $10, $8, $9
-    IMemory[3] = 32'h11400002;  // beq $10, $0, 8
-    IMemory[4] = 32'hac080004;  // sw $8, 4($0)
-    IMemory[5] = 32'hac090000;  // sw $9, 0($0)
-    IMemory[6] = 32'h8c0b0000;  // lw $11, 0($0)
-    IMemory[7] = 32'h8c0c0004;  // lw $12, 4($0)
-    IMemory[8] = 32'h016c5822;  // sub $11, $11, $12
-    */
     
-    // 16-Bit Binary Instructions
+    // 16-Bit Instructions
     // Program: swap memory cells and compute absolute value
     IMemory[0] = 16'b0101000100000000; // lw  $1, 0($0)
     IMemory[1] = 16'b0101001000000100; // lw  $2, 4($0)
     IMemory[2] = 16'b0111011011000000; // slt $3, $1, $2
     IMemory[3] = 16'b1000110000001000; // beq $3, $0, 8
+    //IMemory[3] = 16'b1001110000001000; // bne $3, $0, 8
     IMemory[4] = 16'b0110000100000100; // sw  $1, 4($0)
     IMemory[5] = 16'b0110001000000100; // sw  $2, 0($0)
     IMemory[6] = 16'b0101000100000000; // lw  $1, 0($0)
     IMemory[7] = 16'b0101001000000100; // lw  $2, 4($0)
     IMemory[8] = 16'b0001011001000000; // sub $1, $1, $2  
-    
-    /* 32-Bit Data
-    DMemory [0] = 32'h5;
-    DMemory [1] = 32'h7;
-    */
-    
-    // 16-Bit Data
+
+    // 16-Bit Data Memory
     // switch the cells and see how the simulation output changes
     DMemory [0] = 16'b0000000000000101; // 5
     DMemory [1] = 16'b0000000000000111; // 7
+    
   end
 
   initial PC = 0;
@@ -324,11 +297,13 @@ module CPU (clock,WD,IR);
   
   reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
   alu fetch (3'b010,PC,2,PCplus4,Unused1);
-  alu ex (ALUctl, A, B, ALUOut, Zero);
+  alu ex (ALUOp, A, B, ALUOut, Zero);
   alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);  //change anything?
-  MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Branch,ALUOp}); 
-  ALUControl ALUCtrl(ALUOp, IR[15:12], ALUctl); // ALU control unit
+  MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUOp});
   
+  
+  // Branch Logic Multiplexer
+  mux2x1_2 br (Bne, Beq, Zero, BranchClt);
   
   
   ///// Implement these with gate-level modeling /////
@@ -338,7 +313,7 @@ module CPU (clock,WD,IR);
   
   assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
   
-  assign NextPC = (Branch && Zero) ? Target: PCplus4;  // Branch Mux //change PCplus4 to PCplus2?
+  assign NextPC = (BranchClt && Zero) ? Target: PCplus4;  // Branch Mux //change PCplus4 to PCplus2?
   
   
   
