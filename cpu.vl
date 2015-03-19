@@ -237,17 +237,18 @@ module MainControl (Op, Control);
     4'b0001: Control <= 10'b1001000110; // SUB
     4'b0010: Control <= 10'b1001000000; // AND
     4'b0011: Control <= 10'b1001000001; // OR
+    4'b0111: Control <= 10'b1001000111; // SLT
     4'b0100: Control <= 10'b0101000010; // ADDI
     4'b0101: Control <= 10'b0111000000; // LW
     4'b0110: Control <= 10'b0100100000; // SW
-    4'b1000: Control <= 10'b0000010001; // BEQ
-    4'b1001: Control <= 10'b0000001001; // BNE
+    4'b1000: Control <= 10'b0000010110; // BEQ  // changed last three bits (ALUOp) from 010 to 110
+    4'b1001: Control <= 10'b0000001110; // BNE  // changed last three bits (ALUOp) from 010 to 110
+						// now matches ALUControl from mips-simple template
   endcase
   
 endmodule
 
-// 2x1 Multiplexer // I think we have another 2x1 mux on line 196.
-		   //Can we use one for both mux implementations?
+// 2x1 Multiplexer
 module mux2x1_2(A,B,Select,Out);
   input A,B,Select;
   output Out;
@@ -304,12 +305,9 @@ module CPU (clock,WD,IR);
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUOp});
   
   
-  ///// Implement these with gate-level modeling /////
-  
+  ///// Swap in Jame's gate-level multiplexers for these behavioral ones /////
   assign WR = (RegDst) ? IR[7:6]: IR[9:8];             // RegDst Mux
-  
   assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux //change [ALUOut>>2] ?
-  
   assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
   
   // Branch Logic Multiplexer
