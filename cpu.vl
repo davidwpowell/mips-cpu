@@ -267,7 +267,7 @@ module CPU (clock,WD,IR);
   input clock;
   output [15:0] WD,IR;
   reg[15:0] PC,IMemory[0:1023],DMemory[0:1023];
-  wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
+  wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus2,Target;
   wire [1:0] WR;
   wire [2:0] ALUOp;
 
@@ -299,9 +299,9 @@ module CPU (clock,WD,IR);
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension
   
   reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
-  alu fetch (3'b010,PC,2,PCplus4,Unused1);
+  alu fetch (3'b010,PC,2,PCplus2,Unused1);
   alu ex (ALUOp, A, B, ALUOut, Zero);
-  alu branch (3'b010,SignExtend<<2,PCplus4,Target,Unused2);  //change SignExtend<<2 ?
+  alu branch (3'b010,SignExtend<<2,PCplus2,Target,Unused2);  //change SignExtend<<2 ?
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUOp});
   
   
@@ -313,7 +313,7 @@ module CPU (clock,WD,IR);
   // Branch Logic Multiplexer
   mux2x1_2 br (Bne, Beq, Zero, BranchClt);
   
-  assign NextPC = (BranchClt) ? Target: PCplus4;  // Branch Mux
+  assign NextPC = (BranchClt) ? Target: PCplus2;  // Branch Mux
   
   
   always @(negedge clock) begin 
