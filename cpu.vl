@@ -370,3 +370,39 @@ time clock IR       WD
 17   1     xxxxxxxx 0000000X
 
 */
+
+//2 2-Bit input to 1 2-bit output multiplexor
+module mux2x1_2b(A,B,Select,Out);
+  input [1:0] A,B;
+  input Select;
+  output[1:0] Out;
+  
+  mux2x1 m0(A[0], B[0], Select, Out[0]);
+  mux2x1 m1(A[1], B[1], Select, Out[1]);
+
+endmodule
+
+//2 16-Bit input to 1 16-bit output multiplexor
+module mux2x1_16b(A,B,Select,Out);
+  input [15:0] A,B;
+  input Select;
+  output[15:0] Out;
+  
+  mux2x1 m0(A[0], B[0], Select, Out[0]);
+  mux2x1 m1(A[1], B[1], Select, Out[1]);
+  mux2x1 m2(A[2], B[2], Select, Out[2]);
+  mux2x1 m3(A[3], B[3], Select, Out[3]);
+  mux2x1 m4(A[4], B[4], Select, Out[4]);
+  mux2x1 m5(A[5], B[5], Select, Out[5]);
+  mux2x1 m6(A[6], B[6], Select, Out[6]);
+  mux2x1 m7(A[7], B[7], Select, Out[7]);
+  mux2x1 m8(A[8], B[8], Select, Out[8]);
+  mux2x1 m9(A[9], B[9], Select, Out[9]);
+  mux2x1 m10(A[10], B[10], Select, Out[10]);
+  mux2x1 m11(A[11], B[11], Select, Out[11]);
+  mux2x1 m12(A[12], B[12], Select, Out[12]);
+  mux2x1 m13(A[13], B[13], Select, Out[13]);
+  mux2x1 m14(A[14], B[14], Select, Out[14]);
+  mux2x1 m15(A[15], B[15], Select, Out[15]);
+
+endmodule
