@@ -335,7 +335,7 @@ module CPU (clock,WD,IR);
   
   always @(negedge clock) begin 
     PC <= NextPC;
-    if (MemWrite) DMemory[ALUOut>>1] <= RD2; //change [ALUOut>>2] ?
+    if (MemWrite) DMemory[ALUOut>>1] <= RD2;
   end
   
 endmodule
