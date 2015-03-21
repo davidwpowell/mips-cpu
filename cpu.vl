@@ -239,8 +239,8 @@ module MainControl (Op, Control);
     4'b0011: Control <= 10'b1001000001; // OR
     4'b0111: Control <= 10'b1001000111; // SLT
     4'b0100: Control <= 10'b0101000010; // ADDI
-    4'b0101: Control <= 10'b0111000000; // LW
-    4'b0110: Control <= 10'b0100100000; // SW
+    4'b0101: Control <= 10'b0111000010; // LW
+    4'b0110: Control <= 10'b0100100010; // SW
     4'b1000: Control <= 10'b0000010110; // BEQ  // changed last three bits (ALUOp) from 010 to 110
     4'b1001: Control <= 10'b0000001110; // BNE  // changed last three bits (ALUOp) from 010 to 110
 						// now matches ALUControl from mips-simple template
@@ -267,7 +267,7 @@ module CPU (clock,WD,IR);
   input clock;
   output [15:0] WD,IR;
   reg[15:0] PC,IMemory[0:1023],DMemory[0:1023];
-  wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus2,Target;
+  wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
   wire [1:0] WR;
   wire [2:0] ALUOp;
 
@@ -276,20 +276,20 @@ module CPU (clock,WD,IR);
     // 16-Bit Instructions
     // Program: swap memory cells and compute absolute value
     IMemory[0] = 16'b0101000100000000; // lw  $1, 0($0)
-    IMemory[1] = 16'b0101001000000100; // lw  $2, 4($0)
+    IMemory[1] = 16'b0101001000000010; // lw  $2, 2($0)
     IMemory[2] = 16'b0111011011000000; // slt $3, $1, $2
-    IMemory[3] = 16'b1000110000001000; // beq $3, $0, 8
-    //IMemory[3] = 16'b1001110000001000; // bne $3, $0, 8
-    IMemory[4] = 16'b0110000100000100; // sw  $1, 4($0)
-    IMemory[5] = 16'b0110001000000100; // sw  $2, 0($0)
+    IMemory[3] = 16'b1000110000000100; // beq $3, $0, 4
+    //IMemory[3] = 16'b1001110000000100; // bne $3, $0, 4
+    IMemory[4] = 16'b0110000100000010; // sw  $1, 2($0)
+    IMemory[5] = 16'b0110001000000000; // sw  $2, 0($0)
     IMemory[6] = 16'b0101000100000000; // lw  $1, 0($0)
-    IMemory[7] = 16'b0101001000000100; // lw  $2, 4($0)
+    IMemory[7] = 16'b0101001000000010; // lw  $2, 2($0)
     IMemory[8] = 16'b0001011001000000; // sub $1, $1, $2  
 
     // 16-Bit Data Memory
     // switch the cells and see how the simulation output changes
-    DMemory [0] = 16'b0000000000000101; // 5
-    DMemory [1] = 16'b0000000000000111; // 7
+    DMemory [0] = 16'b0000000000000111; // 7
+    DMemory [1] = 16'b0000000000000101; // 5
     
   end
 
@@ -299,26 +299,31 @@ module CPU (clock,WD,IR);
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension
   
   reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
-  alu fetch (3'b010,PC,2,PCplus2,Unused1);
+  alu fetch (3'b010,PC,2,PCplus4,Unused1);
   alu ex (ALUOp, A, B, ALUOut, Zero);
-  alu branch (3'b010,SignExtend<<2,PCplus2,Target,Unused2);  //change SignExtend<<2 ?
+  alu branch (3'b010,SignExtend<<1,PCplus4,Target,Unused2);  //change SignExtend<<2 ?
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUOp});
   
   
-  ///// Swap in Jame's gate-level multiplexers for these behavioral ones /////
-  assign WR = (RegDst) ? IR[7:6]: IR[9:8];             // RegDst Mux
-  assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux //change [ALUOut>>2] ?
-  assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
+  //assign WR = (RegDst) ? IR[7:6]: IR[9:8];             // RegDst Mux
+  mux2x1_2b RegDstMux(IR[9:8], IR[7:6], RegDst, WR);
+  
+  //assign WD = (MemtoReg) ? DMemory[ALUOut>>1]: ALUOut; // MemtoReg Mux //change [ALUOut>>2] ?
+  mux2x1_16b MemtoRegMux(ALUOut, DMemory[ALUOut>>1], MemtoReg, WD);
+  
+  //assign B  = (ALUSrc) ? SignExtend: RD2;              // ALUSrc Mux 
+  mux2x1_16b ALUSrcMux(RD2, SignExtend, ALUSrc, B);
   
   // Branch Logic Multiplexer
   mux2x1_2 br (Bne, Beq, Zero, BranchClt);
   
-  assign NextPC = (BranchClt) ? Target: PCplus2;  // Branch Mux
+  //assign NextPC = (BranchClt) ? Target: PCplus4;  // Branch Mux
+  mux2x1_16b BranchMux(PCplus4, Target, BranchClt, NextPC);
   
   
   always @(negedge clock) begin 
     PC <= NextPC;
-    if (MemWrite) DMemory[ALUOut>>2] <= RD2; //change [ALUOut>>2] ?
+    if (MemWrite) DMemory[ALUOut>>1] <= RD2; //change [ALUOut>>2] ?
   end
   
 endmodule
@@ -327,17 +332,18 @@ endmodule
 module test ();
 
   reg clock;
-  wire [15:0] WD,IR;
+  wire signed [15:0] WD;
+  wire [15:0] IR;
 
   CPU test_cpu(clock,WD,IR);
 
   always #1 clock = ~clock;
-  
+
   initial begin
     $display ("time clock IR       WD");
-    $monitor ("%2d   %b     %h %d", $time,clock,IR,WD);
+    $monitor ("%2d   %b     %b %d", $time,clock,IR,WD);
     clock = 1;
-    #18 $finish;
+    #17 $finish;
   end
   
 endmodule
